@@ -1,9 +1,13 @@
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 
 /**
  * Created by Sean Gerhardt on 5/26/2015.
  */
 public class HorseRace {
+    //Used to help us start threads as close to the same time as possible
+    static CyclicBarrier gate = null;
 
     // Display a message, preceded by the name of the current thread
     static void threadMessage(String message) {
@@ -27,6 +31,7 @@ public class HorseRace {
 
         public void run() {
             try {
+                gate.await();
                 while (distanceTravelled < 100) {
                     // Pause for 4 seconds
                     Thread.sleep(4000);
@@ -52,6 +57,8 @@ public class HorseRace {
                 }
             } catch (InterruptedException e) {
                 threadMessage("I wasn't done!");
+            } catch (BrokenBarrierException e) {
+                e.printStackTrace();
             }
         }
 
@@ -64,8 +71,7 @@ public class HorseRace {
     }
 
 
-    public static void main(String args[]) throws InterruptedException {
-
+    public static void main(String args[]) throws InterruptedException, BrokenBarrierException {
         // Delay, in milliseconds before we interrupt MessageLoop thread (default one hour).
         long patience = 1000 * 60 * 60;
 
@@ -87,10 +93,14 @@ public class HorseRace {
 
         Thread[] threads = new Thread[horses.length];
 
+        gate = new CyclicBarrier(horses.length + 1);
+
         for (int i = 0; i < horses.length; i++) {
             threads[i] = new Thread(horses[i]);
             threads[i].start();
         }
+        //The count on the gate is now met, open the gate and start the race!
+        gate.await();
         threadMessage("Waiting for Horse threads to finish");
         // loop until the last horse/thread finishes
         for (int i = 0; i < horses.length; i++) {
